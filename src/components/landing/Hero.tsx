@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export const Hero = () => {
   return (
@@ -14,26 +14,10 @@ export const Hero = () => {
           making consistent progress simple and achievable.
         </p>
         
-        <div className="max-w-2xl mx-auto relative">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <input
-              type="text"
-              placeholder="Search templates (e.g. Fitness, Learning)"
-              className="w-full px-12 py-4 rounded-full border border-gray-200 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
-          
-          <div className="mt-8 flex flex-wrap justify-center gap-4">
-            {["Templates", "Daily Tasks", "Progress Tracking", "Goal Setting"].map((tag) => (
-              <span
-                key={tag}
-                className="px-4 py-2 bg-white rounded-full text-sm text-gray-600 hover:bg-gray-50 cursor-pointer"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+        <div className="flex justify-center">
+          <Button size="lg" className="text-base">
+            Get Started
+          </Button>
         </div>
       </div>
     </div>
