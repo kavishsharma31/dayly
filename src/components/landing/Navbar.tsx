@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { ChevronDown } from "lucide-react";
 
 export const Navbar = () => {
   return (
@@ -12,17 +11,6 @@ export const Navbar = () => {
           
           <div className="hidden md:flex items-center space-x-8">
             <a href="#explore" className="text-gray-700 hover:text-primary">Explore</a>
-            <div className="relative group">
-              <button className="flex items-center text-gray-700 hover:text-primary">
-                Product <ChevronDown className="ml-1 h-4 w-4" />
-              </button>
-            </div>
-            <div className="relative group">
-              <button className="flex items-center text-gray-700 hover:text-primary">
-                Resources <ChevronDown className="ml-1 h-4 w-4" />
-              </button>
-            </div>
-            <a href="#pricing" className="text-gray-700 hover:text-primary">Pricing</a>
           </div>
 
           <div className="flex items-center space-x-4">
