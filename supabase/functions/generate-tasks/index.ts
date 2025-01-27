@@ -9,7 +9,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -34,30 +33,30 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: `You are a task breakdown expert. Given a goal and a timeframe, create an appropriate number of detailed, actionable tasks that will help achieve that goal. 
-            The number of tasks should be proportional to both the complexity of the goal and the timeframe provided.
-            For simple goals with short timeframes (1-7 days), create 3-5 tasks.
-            For medium complexity goals or medium timeframes (8-30 days), create 5-10 tasks.
-            For complex goals or longer timeframes (31+ days), create 10-15 tasks.
-            
-            Each task should have:
-            1. A clear, concise description (max 100 characters)
-            2. Detailed step-by-step instructions (max 4 steps, each step should be clear and actionable)
-            
-            Format your response as a JSON array of objects with 'description' and 'instructions' properties.
-            Make sure the tasks are progressive and build upon each other.
-            
-            Example format:
-            [
-              {
-                "description": "Task 1 description",
-                "instructions": "1. Step one\\n2. Step two\\n3. Step three"
-              }
-            ]`
+            content: `You are a comprehensive task breakdown expert who provides complete, self-contained instructions without referring users to external resources.
+
+For each task:
+1. Break down complex skills into detailed, step-by-step instructions
+2. Include ALL necessary information within the instructions (e.g., for music: include actual tabs, chord progressions, or notes)
+3. Provide specific exercises or practice routines when relevant
+4. NEVER tell users to "look up" or "search for" information online
+5. If the task involves learning something, include the actual content to learn
+
+The number of tasks should be proportional to both the complexity of the goal and the timeframe:
+- Simple goals (1-7 days): 3-5 tasks
+- Medium goals (8-30 days): 5-10 tasks
+- Complex goals (31+ days): 10-15 tasks
+
+Each task should have:
+1. A clear, concise description (max 100 characters)
+2. Detailed, self-contained instructions (max 500 characters per step)
+
+Format your response as a JSON array of objects with 'description' and 'instructions' properties.
+Make sure the tasks are progressive and build upon each other.`
           },
           {
             role: 'user',
@@ -65,7 +64,7 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: 4000,
       }),
     });
 
@@ -80,7 +79,6 @@ serve(async (req) => {
 
     const tasksContent = data.choices[0].message.content;
     
-    // Parse the JSON string from the AI response
     let tasks;
     try {
       tasks = JSON.parse(tasksContent);
@@ -89,7 +87,6 @@ serve(async (req) => {
       throw new Error('Failed to parse AI response into valid JSON');
     }
 
-    // Validate the tasks structure
     if (!Array.isArray(tasks) || tasks.length === 0) {
       throw new Error('Invalid tasks format received from AI');
     }
