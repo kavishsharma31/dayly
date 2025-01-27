@@ -37,7 +37,7 @@ export const ProgressContent = () => {
         .from('tasks')
         .select('completed_at')
         .eq('goal_id', goals.id)
-        .is('completed_at', 'not.null')
+        .not('completed_at', 'is', null)
         .order('completed_at', { ascending: false });
 
       if (streakError) return { progress, streak: 0 };

@@ -62,12 +62,17 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
   const handleGetStarted = async () => {
     setIsLoading(true);
     try {
+      // Get the current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No user found");
+
       // Insert the goal
       const { data: goalData, error: goalError } = await supabase
         .from('goals')
-        .insert([
-          { description: goalDescription }
-        ])
+        .insert({
+          description: goalDescription,
+          user_id: user.id
+        })
         .select()
         .single();
 
