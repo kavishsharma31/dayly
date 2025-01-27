@@ -53,7 +53,7 @@ export const DashboardContent = () => {
         .is('completed_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();
+        .maybeSingle();  // Changed from .single() to .maybeSingle()
 
       if (error) throw error;
       return data as Goal | null;
