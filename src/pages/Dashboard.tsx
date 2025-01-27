@@ -1,10 +1,11 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar";
-import { LayoutDashboard, LineChart, Target, User } from "lucide-react";
+import { LayoutDashboard, LineChart, Target, ListTodo } from "lucide-react";
 import { useState } from "react";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProgressContent } from "@/components/dashboard/ProgressContent";
 import { GoalContent } from "@/components/dashboard/GoalContent";
 import { ProfileMenu } from "@/components/dashboard/ProfileMenu";
+import { CompletedGoalsContent } from "@/components/dashboard/CompletedGoalsContent";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -21,9 +22,14 @@ const Dashboard = () => {
       icon: LineChart,
     },
     {
-      id: "goal",
-      title: "Goal",
+      id: "current-goal",
+      title: "Current Goal",
       icon: Target,
+    },
+    {
+      id: "my-goals",
+      title: "My Goals",
+      icon: ListTodo,
     },
   ];
 
@@ -59,7 +65,8 @@ const Dashboard = () => {
           <main className="p-6">
             {activeTab === "dashboard" && <DashboardContent />}
             {activeTab === "progress" && <ProgressContent />}
-            {activeTab === "goal" && <GoalContent />}
+            {activeTab === "current-goal" && <GoalContent />}
+            {activeTab === "my-goals" && <CompletedGoalsContent />}
           </main>
         </div>
       </div>
