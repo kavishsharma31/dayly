@@ -1,5 +1,5 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { LayoutDashboard, LineChart, Target, ListTodo } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Target } from "lucide-react";
 import { useState } from "react";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProgressContent } from "@/components/dashboard/ProgressContent";
@@ -19,7 +19,7 @@ const Dashboard = () => {
     {
       id: "progress",
       title: "Progress",
-      icon: LineChart,
+      icon: TrendingUp,
     },
     {
       id: "current-goal",
@@ -29,14 +29,14 @@ const Dashboard = () => {
     {
       id: "my-goals",
       title: "My Goals",
-      icon: ListTodo,
+      icon: Target,
     },
   ];
 
   return (
-    <SidebarProvider defaultOpen={false}>
+    <SidebarProvider defaultOpen={true}>
       <div className="min-h-screen flex w-full">
-        <Sidebar>
+        <Sidebar variant="sidebar" className="bg-white border-r">
           <SidebarContent className="bg-white">
             <SidebarGroup>
               <SidebarGroupContent>
