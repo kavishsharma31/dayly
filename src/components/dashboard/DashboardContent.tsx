@@ -5,6 +5,7 @@ import { CreateGoalForm } from "./CreateGoalForm";
 import { useNavigate } from "react-router-dom";
 import ReactConfetti from "react-confetti";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export const DashboardContent = () => {
   const [hasGoal, setHasGoal] = useState(false);
@@ -13,8 +14,20 @@ export const DashboardContent = () => {
   const [currentTaskInstructions, setCurrentTaskInstructions] = useState<string>("");
   const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [username, setUsername] = useState<string>("");
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const getUsername = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const email = user.email;
+        setUsername(email?.split('@')[0] || 'User');
+      }
+    };
+    getUsername();
+  }, []);
 
   useEffect(() => {
     const savedGoal = localStorage.getItem("currentGoal");
@@ -91,38 +104,41 @@ export const DashboardContent = () => {
           recycle={false}
         />
       )}
-      {showGoalForm ? (
-        <CreateGoalForm onGoalCreated={handleGoalCreated} />
-      ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Daily Overview</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!hasGoal ? (
-              <div className="text-center py-8">
-                <h3 className="text-lg font-semibold mb-4">No Goal Set</h3>
-                <p className="text-muted-foreground mb-6">
-                  Start by setting your goal and we'll help you break it down into daily tasks
-                </p>
-                <Button onClick={() => setShowGoalForm(true)}>Create Goal</Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="font-semibold">Today's Task</h3>
-                  <p className="text-muted-foreground">{currentTask}</p>
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold text-primary">Welcome back, {username}! 👋</h1>
+        {showGoalForm ? (
+          <CreateGoalForm onGoalCreated={handleGoalCreated} />
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Overview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {!hasGoal ? (
+                <div className="text-center py-8">
+                  <h3 className="text-lg font-semibold mb-4">No Goal Set</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Start by setting your goal and we'll help you break it down into daily tasks
+                  </p>
+                  <Button onClick={() => setShowGoalForm(true)}>Create Goal</Button>
                 </div>
-                <div>
-                  <h3 className="font-semibold">How to Complete This Task</h3>
-                  <p className="text-muted-foreground">{currentTaskInstructions}</p>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold">Today's Task</h3>
+                    <p className="text-muted-foreground">{currentTask}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">How to Complete This Task</h3>
+                    <p className="text-muted-foreground">{currentTaskInstructions}</p>
+                  </div>
+                  <Button onClick={handleTaskComplete}>Mark as Complete</Button>
                 </div>
-                <Button onClick={handleTaskComplete}>Mark as Complete</Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </>
   );
 };
