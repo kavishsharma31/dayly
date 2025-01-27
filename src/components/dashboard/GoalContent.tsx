@@ -1,6 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useState } from "react";
 
 export const GoalContent = () => {
+  const [goalDescription, setGoalDescription] = useState("");
+  
+  useEffect(() => {
+    const savedGoal = localStorage.getItem("currentGoal");
+    if (savedGoal) {
+      setGoalDescription(savedGoal);
+    }
+  }, []);
+
   return (
     <Card>
       <CardHeader>
@@ -9,7 +19,9 @@ export const GoalContent = () => {
       <CardContent className="space-y-4">
         <div>
           <h3 className="font-semibold mb-2">Your Goal</h3>
-          <p className="text-muted-foreground">Learn to play the guitar</p>
+          <p className="text-muted-foreground">
+            {goalDescription || "No goal set yet"}
+          </p>
         </div>
         
         <div>
