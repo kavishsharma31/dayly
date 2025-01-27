@@ -15,23 +15,43 @@ serve(async (req) => {
   try {
     const { goalDescription } = await req.json();
 
+    if (!goalDescription) {
+      throw new Error('Goal description is required');
+    }
+
+    const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+    if (!openAIApiKey) {
+      throw new Error('OpenAI API key is not configured');
+    }
+
+    console.log('Calling OpenAI API with goal description:', goalDescription);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('OPENAI_API_KEY')}`,
+        'Authorization': `Bearer ${openAIApiKey}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
             content: `You are a task breakdown expert. Given a goal, create 5 detailed, actionable tasks that will help achieve that goal. 
             Each task should have:
-            1. A clear, concise description
-            2. Detailed step-by-step instructions (4 steps maximum)
-            Format the response as a JSON array of objects with 'description' and 'instructions' properties.
-            Make sure the tasks are progressive and build upon each other.`
+            1. A clear, concise description (max 100 characters)
+            2. Detailed step-by-step instructions (max 4 steps, each step should be clear and actionable)
+            
+            Format your response as a JSON array of objects with 'description' and 'instructions' properties.
+            Make sure the tasks are progressive and build upon each other.
+            
+            Example format:
+            [
+              {
+                "description": "Task 1 description",
+                "instructions": "1. Step one\n2. Step two\n3. Step three"
+              }
+            ]`
           },
           {
             role: 'user',
@@ -39,30 +59,57 @@ serve(async (req) => {
           }
         ],
         temperature: 0.7,
+        max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
-      throw new Error('Failed to generate tasks');
+      const error = await response.text();
+      console.error('OpenAI API error:', error);
+      throw new Error(`OpenAI API error: ${error}`);
     }
 
     const data = await response.json();
+    console.log('OpenAI API response:', data);
+
     const tasksContent = data.choices[0].message.content;
     
     // Parse the JSON string from the AI response
-    const tasks = JSON.parse(tasksContent);
+    let tasks;
+    try {
+      tasks = JSON.parse(tasksContent);
+    } catch (error) {
+      console.error('Failed to parse OpenAI response:', error);
+      throw new Error('Failed to parse AI response into valid JSON');
+    }
+
+    // Validate the tasks structure
+    if (!Array.isArray(tasks) || tasks.length === 0) {
+      throw new Error('Invalid tasks format received from AI');
+    }
 
     return new Response(
       JSON.stringify({ tasks }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        } 
+      }
     );
   } catch (error) {
     console.error('Error in generate-tasks function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message || 'Failed to generate tasks',
+        details: error.toString()
+      }),
       {
         status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json' 
+        },
       }
     );
   }
