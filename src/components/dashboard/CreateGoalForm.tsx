@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Task {
   description: string;
@@ -13,6 +14,7 @@ interface Task {
 export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void }) => {
   const [goalDescription, setGoalDescription] = useState("");
   const [showTasks, setShowTasks] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   // This is a mock of what would later be AI-generated tasks
@@ -57,16 +59,49 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
     setShowTasks(true);
   };
 
-  const handleGetStarted = () => {
-    localStorage.setItem("currentGoal", goalDescription);
-    localStorage.setItem("tasks", JSON.stringify(sampleTasks));
-    localStorage.setItem("progress", "0");
-    localStorage.setItem("streak", "0");
-    toast({
-      title: "Goal Created!",
-      description: "Your goal has been saved and your first task is ready.",
-    });
-    onGoalCreated();
+  const handleGetStarted = async () => {
+    setIsLoading(true);
+    try {
+      // Insert the goal
+      const { data: goalData, error: goalError } = await supabase
+        .from('goals')
+        .insert([
+          { description: goalDescription }
+        ])
+        .select()
+        .single();
+
+      if (goalError) throw goalError;
+
+      // Insert tasks for the goal
+      const tasksToInsert = sampleTasks.map(task => ({
+        goal_id: goalData.id,
+        description: task.description,
+        instructions: task.instructions,
+        is_completed: false
+      }));
+
+      const { error: tasksError } = await supabase
+        .from('tasks')
+        .insert(tasksToInsert);
+
+      if (tasksError) throw tasksError;
+
+      toast({
+        title: "Goal Created!",
+        description: "Your goal has been saved and your tasks are ready.",
+      });
+      onGoalCreated();
+    } catch (error) {
+      console.error('Error creating goal:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create goal. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -110,7 +145,9 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
                 ))}
               </ul>
             </div>
-            <Button onClick={handleGetStarted}>Get Started</Button>
+            <Button onClick={handleGetStarted} disabled={isLoading}>
+              {isLoading ? "Creating..." : "Get Started"}
+            </Button>
           </div>
         )}
       </CardContent>

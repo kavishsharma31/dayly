@@ -1,46 +1,70 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export const ProgressContent = () => {
-  const [progress, setProgress] = useState(0);
-  const [streak, setStreak] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
 
-  useEffect(() => {
-    const savedProgress = parseInt(localStorage.getItem("progress") || "0");
-    const savedStreak = parseInt(localStorage.getItem("streak") || "0");
-    
-    setIsAnimating(true);
-    
-    // Animate progress bar
-    const progressInterval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= savedProgress) {
-          clearInterval(progressInterval);
-          return savedProgress;
-        }
-        return prev + 1;
-      });
-    }, 20);
+  // Fetch completed tasks count and total tasks count
+  const { data: progressData } = useQuery({
+    queryKey: ['progress'],
+    queryFn: async () => {
+      const { data: goals, error: goalsError } = await supabase
+        .from('goals')
+        .select('id')
+        .is('completed_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
 
-    // Animate streak counter
-    let currentStreak = 0;
-    const streakInterval = setInterval(() => {
-      if (currentStreak >= savedStreak) {
-        clearInterval(streakInterval);
-        setIsAnimating(false);
-      } else {
-        currentStreak += 1;
-        setStreak(currentStreak);
+      if (goalsError || !goals) return { progress: 0, streak: 0 };
+
+      const { data: tasks, error: tasksError } = await supabase
+        .from('tasks')
+        .select('is_completed')
+        .eq('goal_id', goals.id);
+
+      if (tasksError) return { progress: 0, streak: 0 };
+
+      const completedTasks = tasks.filter(task => task.is_completed).length;
+      const totalTasks = tasks.length;
+      const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+      // Calculate streak (completed tasks in consecutive days)
+      const { data: completedTasks2, error: streakError } = await supabase
+        .from('tasks')
+        .select('completed_at')
+        .eq('goal_id', goals.id)
+        .is('completed_at', 'not.null')
+        .order('completed_at', { ascending: false });
+
+      if (streakError) return { progress, streak: 0 };
+
+      let streak = 0;
+      if (completedTasks2 && completedTasks2.length > 0) {
+        const dates = completedTasks2.map(task => 
+          new Date(task.completed_at!).toISOString().split('T')[0]
+        );
+        const uniqueDates = [...new Set(dates)];
+        streak = uniqueDates.length;
       }
-    }, 100);
 
-    return () => {
-      clearInterval(progressInterval);
-      clearInterval(streakInterval);
-    };
-  }, []);
+      return { progress, streak };
+    }
+  });
+
+  const progress = progressData?.progress ?? 0;
+  const streak = progressData?.streak ?? 0;
+
+  useEffect(() => {
+    setIsAnimating(true);
+    const timeout = setTimeout(() => {
+      setIsAnimating(false);
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [progress, streak]);
 
   return (
     <div className="space-y-6">

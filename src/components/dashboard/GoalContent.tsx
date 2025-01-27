@@ -1,15 +1,27 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useQuery } from "@tanstack/react-query";
 
 export const GoalContent = () => {
-  const [goalDescription, setGoalDescription] = useState("");
-  
-  useEffect(() => {
-    const savedGoal = localStorage.getItem("currentGoal");
-    if (savedGoal) {
-      setGoalDescription(savedGoal);
+  const { data: goal, isLoading } = useQuery({
+    queryKey: ['currentGoal'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('goals')
+        .select('*')
+        .is('completed_at', null)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data;
     }
-  }, []);
+  });
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Card>
@@ -20,7 +32,7 @@ export const GoalContent = () => {
         <div>
           <h3 className="font-semibold mb-2">Your Goal</h3>
           <p className="text-muted-foreground">
-            {goalDescription || "No goal set yet"}
+            {goal?.description || "No goal set yet"}
           </p>
         </div>
         

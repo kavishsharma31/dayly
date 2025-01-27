@@ -9,6 +9,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      goals: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -29,6 +53,44 @@ export type Database = {
           username?: string | null
         }
         Relationships: []
+      }
+      tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string
+          goal_id: string
+          id: string
+          instructions: string
+          is_completed: boolean | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description: string
+          goal_id: string
+          id?: string
+          instructions: string
+          is_completed?: boolean | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          goal_id?: string
+          id?: string
+          instructions?: string
+          is_completed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_goal_id_fkey"
+            columns: ["goal_id"]
+            isOneToOne: false
+            referencedRelation: "goals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
