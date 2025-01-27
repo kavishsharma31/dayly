@@ -1,4 +1,4 @@
-import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { LayoutDashboard, LineChart, Target, ListTodo } from "lucide-react";
 import { useState } from "react";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
@@ -34,7 +34,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full">
         <Sidebar>
           <SidebarContent>
@@ -59,7 +59,8 @@ const Dashboard = () => {
         </Sidebar>
         
         <div className="flex-1">
-          <div className="p-4 border-b flex justify-end">
+          <div className="p-4 border-b flex items-center justify-between">
+            <SidebarTrigger className="md:hidden" />
             <ProfileMenu />
           </div>
           <main className="p-6">
