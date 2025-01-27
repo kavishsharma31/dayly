@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { format, addDays } from "date-fns";
 
 export const GoalContent = () => {
   const { data: goal, isLoading } = useQuery({
@@ -23,6 +24,11 @@ export const GoalContent = () => {
     return <div>Loading...</div>;
   }
 
+  // Calculate expected completion date (30 days from creation)
+  const expectedCompletionDate = goal?.created_at 
+    ? format(addDays(new Date(goal.created_at), 30), 'MMMM d, yyyy')
+    : 'Not set';
+
   return (
     <Card>
       <CardHeader>
@@ -38,7 +44,7 @@ export const GoalContent = () => {
         
         <div>
           <h3 className="font-semibold mb-2">Expected Completion</h3>
-          <p className="text-muted-foreground">December 31, 2024</p>
+          <p className="text-muted-foreground">{expectedCompletionDate}</p>
         </div>
         
         <div>
