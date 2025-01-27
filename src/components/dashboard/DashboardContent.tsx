@@ -95,6 +95,18 @@ export const DashboardContent = () => {
     }, 3000);
   };
 
+  const handleStartNewProject = () => {
+    // Clear existing goal and tasks
+    localStorage.removeItem("currentGoal");
+    localStorage.removeItem("tasks");
+    setHasGoal(false);
+    setShowGoalForm(true);
+    toast({
+      title: "Ready to start a new project!",
+      description: "Let's set up your new goal.",
+    });
+  };
+
   return (
     <>
       {showConfetti && (
@@ -109,34 +121,46 @@ export const DashboardContent = () => {
         {showGoalForm ? (
           <CreateGoalForm onGoalCreated={handleGoalCreated} />
         ) : (
-          <Card>
-            <CardHeader>
-              <CardTitle>Daily Overview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {!hasGoal ? (
-                <div className="text-center py-8">
-                  <h3 className="text-lg font-semibold mb-4">No Goal Set</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Start by setting your goal and we'll help you break it down into daily tasks
-                  </p>
-                  <Button onClick={() => setShowGoalForm(true)}>Create Goal</Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="font-semibold">Today's Task</h3>
-                    <p className="text-muted-foreground">{currentTask}</p>
+          <div className="relative">
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Overview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!hasGoal ? (
+                  <div className="text-center py-8">
+                    <h3 className="text-lg font-semibold mb-4">No Goal Set</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Start by setting your goal and we'll help you break it down into daily tasks
+                    </p>
+                    <Button onClick={() => setShowGoalForm(true)}>Create Goal</Button>
                   </div>
-                  <div>
-                    <h3 className="font-semibold">How to Complete This Task</h3>
-                    <p className="text-muted-foreground">{currentTaskInstructions}</p>
+                ) : (
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-semibold">Today's Task</h3>
+                      <p className="text-muted-foreground">{currentTask}</p>
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">How to Complete This Task</h3>
+                      <p className="text-muted-foreground">{currentTaskInstructions}</p>
+                    </div>
+                    <Button onClick={handleTaskComplete}>Mark as Complete</Button>
                   </div>
-                  <Button onClick={handleTaskComplete}>Mark as Complete</Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                )}
+              </CardContent>
+            </Card>
+            {hasGoal && (
+              <div className="absolute bottom-4 right-4">
+                <Button 
+                  onClick={handleStartNewProject}
+                  variant="secondary"
+                >
+                  Start New Project
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </>
