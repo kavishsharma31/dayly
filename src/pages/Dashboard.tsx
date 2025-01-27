@@ -36,8 +36,8 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full">
-        <Sidebar className="bg-white">
-          <SidebarContent>
+        <Sidebar className="bg-background">
+          <SidebarContent className="bg-white">
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
@@ -59,7 +59,7 @@ const Dashboard = () => {
         </Sidebar>
         
         <div className="flex-1">
-          <div className="p-4 border-b flex items-center justify-between">
+          <div className="p-4 border-b flex items-center justify-between bg-white">
             <SidebarTrigger className="md:hidden" />
             <ProfileMenu />
           </div>
