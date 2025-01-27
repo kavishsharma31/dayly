@@ -33,7 +33,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -55,8 +55,14 @@ Each task should have:
 1. A clear, concise description (max 100 characters)
 2. Detailed, self-contained instructions (max 500 characters per step)
 
-Format your response as a JSON array of objects with 'description' and 'instructions' properties.
-Make sure the tasks are progressive and build upon each other.`
+IMPORTANT: Your response must be a valid JSON array of objects, each with 'description' and 'instructions' properties.
+Example format:
+[
+  {
+    "description": "Task description here",
+    "instructions": "Step 1 instructions\\nStep 2 instructions"
+  }
+]`
           },
           {
             role: 'user',
@@ -78,17 +84,32 @@ Make sure the tasks are progressive and build upon each other.`
     console.log('OpenAI API response:', data);
 
     const tasksContent = data.choices[0].message.content;
+    console.log('Raw tasks content:', tasksContent);
     
     let tasks;
     try {
       tasks = JSON.parse(tasksContent);
+      console.log('Parsed tasks:', tasks);
     } catch (error) {
       console.error('Failed to parse OpenAI response:', error);
-      throw new Error('Failed to parse AI response into valid JSON');
+      console.error('Raw content that failed to parse:', tasksContent);
+      throw new Error('Failed to parse AI response into valid JSON. Please try again.');
     }
 
     if (!Array.isArray(tasks) || tasks.length === 0) {
+      console.error('Invalid tasks format:', tasks);
       throw new Error('Invalid tasks format received from AI');
+    }
+
+    // Validate task structure
+    const isValidTask = (task: any) => 
+      typeof task === 'object' && 
+      typeof task.description === 'string' && 
+      typeof task.instructions === 'string';
+
+    if (!tasks.every(isValidTask)) {
+      console.error('Invalid task structure:', tasks);
+      throw new Error('Tasks received from AI do not match required format');
     }
 
     return new Response(
