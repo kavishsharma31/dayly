@@ -5,6 +5,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Task {
   description: string;
@@ -14,6 +16,7 @@ interface Task {
 
 export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void }) => {
   const [goalDescription, setGoalDescription] = useState("");
+  const [durationDays, setDurationDays] = useState("30");
   const [showTasks, setShowTasks] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [generatedTasks, setGeneratedTasks] = useState<Task[]>([]);
@@ -31,11 +34,24 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
       return;
     }
 
+    if (!durationDays || parseInt(durationDays) < 1) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid duration in days",
+        variant: "destructive",
+        duration: 3000,
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Generate tasks using OpenAI
       const { data: aiResponse, error: aiError } = await supabase.functions.invoke('generate-tasks', {
-        body: { goalDescription },
+        body: { 
+          goalDescription,
+          durationDays: parseInt(durationDays)
+        },
       });
 
       if (aiError) throw aiError;
@@ -65,12 +81,17 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("No user found");
 
+      const completionTarget = new Date();
+      completionTarget.setDate(completionTarget.getDate() + parseInt(durationDays));
+
       // Insert the goal
       const { data: goalData, error: goalError } = await supabase
         .from('goals')
         .insert({
           description: goalDescription,
-          user_id: user.id
+          user_id: user.id,
+          completion_target: completionTarget.toISOString(),
+          expected_duration_days: parseInt(durationDays)
         })
         .select()
         .single();
@@ -119,15 +140,25 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
         {!showTasks ? (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label htmlFor="goal" className="block text-sm font-medium mb-2">
-                Describe your goal in detail
-              </label>
+              <Label htmlFor="goal">Describe your goal in detail</Label>
               <Textarea
                 id="goal"
                 placeholder="Example: I want to learn to play Smoke on the Water on guitar without any prior experience..."
                 value={goalDescription}
                 onChange={(e) => setGoalDescription(e.target.value)}
                 className="min-h-[120px]"
+              />
+            </div>
+            <div>
+              <Label htmlFor="duration">How many days do you want to spend on this goal?</Label>
+              <Input
+                id="duration"
+                type="number"
+                min="1"
+                value={durationDays}
+                onChange={(e) => setDurationDays(e.target.value)}
+                placeholder="Enter number of days"
+                className="max-w-[200px]"
               />
             </div>
             <Button type="submit" disabled={isLoading}>
@@ -146,9 +177,12 @@ export const CreateGoalForm = ({ onGoalCreated }: { onGoalCreated: () => void })
             <div>
               <h3 className="font-medium mb-2">Your Goal</h3>
               <p className="text-muted-foreground">{goalDescription}</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Target completion: {new Date(new Date().setDate(new Date().getDate() + parseInt(durationDays))).toLocaleDateString()}
+              </p>
             </div>
             <div>
-              <h3 className="font-medium mb-2">Daily Tasks</h3>
+              <h3 className="font-medium mb-2">Generated Tasks</h3>
               <ul className="space-y-4">
                 {generatedTasks.map((task, index) => (
                   <li key={index} className="bg-secondary/50 rounded-lg p-4">

@@ -12,22 +12,28 @@ export type Database = {
       goals: {
         Row: {
           completed_at: string | null
+          completion_target: string | null
           created_at: string
           description: string
+          expected_duration_days: number | null
           id: string
           user_id: string
         }
         Insert: {
           completed_at?: string | null
+          completion_target?: string | null
           created_at?: string
           description: string
+          expected_duration_days?: number | null
           id?: string
           user_id: string
         }
         Update: {
           completed_at?: string | null
+          completion_target?: string | null
           created_at?: string
           description?: string
+          expected_duration_days?: number | null
           id?: string
           user_id?: string
         }

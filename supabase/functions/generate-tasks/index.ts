@@ -19,13 +19,13 @@ serve(async (req) => {
       throw new Error('OpenAI API key is not configured');
     }
 
-    const { goalDescription } = await req.json();
+    const { goalDescription, durationDays } = await req.json();
     
-    if (!goalDescription) {
-      throw new Error('Goal description is required');
+    if (!goalDescription || !durationDays) {
+      throw new Error('Goal description and duration are required');
     }
 
-    console.log('Calling OpenAI API with goal description:', goalDescription);
+    console.log('Calling OpenAI API with:', { goalDescription, durationDays });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -34,11 +34,16 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
-            content: `You are a task breakdown expert. Given a goal, create 5 detailed, actionable tasks that will help achieve that goal. 
+            content: `You are a task breakdown expert. Given a goal and a timeframe, create an appropriate number of detailed, actionable tasks that will help achieve that goal. 
+            The number of tasks should be proportional to both the complexity of the goal and the timeframe provided.
+            For simple goals with short timeframes (1-7 days), create 3-5 tasks.
+            For medium complexity goals or medium timeframes (8-30 days), create 5-10 tasks.
+            For complex goals or longer timeframes (31+ days), create 10-15 tasks.
+            
             Each task should have:
             1. A clear, concise description (max 100 characters)
             2. Detailed step-by-step instructions (max 4 steps, each step should be clear and actionable)
@@ -50,17 +55,17 @@ serve(async (req) => {
             [
               {
                 "description": "Task 1 description",
-                "instructions": "1. Step one\n2. Step two\n3. Step three"
+                "instructions": "1. Step one\\n2. Step two\\n3. Step three"
               }
             ]`
           },
           {
             role: 'user',
-            content: goalDescription
+            content: `Goal: ${goalDescription}\nTimeframe: ${durationDays} days`
           }
         ],
         temperature: 0.7,
-        max_tokens: 1000,
+        max_tokens: 2000,
       }),
     });
 
