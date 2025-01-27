@@ -36,7 +36,7 @@ const Dashboard = () => {
   return (
     <SidebarProvider defaultOpen={false}>
       <div className="min-h-screen flex w-full">
-        <Sidebar>
+        <Sidebar className="bg-white">
           <SidebarContent>
             <SidebarGroup>
               <SidebarGroupContent>
