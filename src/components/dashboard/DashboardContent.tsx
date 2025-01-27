@@ -14,6 +14,7 @@ interface Task {
   instructions: string;
   is_completed: boolean;
   goal_id: string;
+  created_at: string;
 }
 
 interface Goal {
@@ -24,7 +25,6 @@ interface Goal {
 
 export const DashboardContent = () => {
   const [showGoalForm, setShowGoalForm] = useState(false);
-  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const [username, setUsername] = useState<string>("");
   const navigate = useNavigate();
@@ -53,7 +53,7 @@ export const DashboardContent = () => {
         .is('completed_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .maybeSingle();  // Changed from .single() to .maybeSingle()
+        .maybeSingle();
 
       if (error) throw error;
       return data as Goal | null;
@@ -77,17 +77,18 @@ export const DashboardContent = () => {
     enabled: !!goal?.id
   });
 
+  // Get the next incomplete task
+  const currentTask = tasks?.find(task => !task.is_completed);
+
   const handleGoalCreated = () => {
     setShowGoalForm(false);
     queryClient.invalidateQueries({ queryKey: ['currentGoal'] });
   };
 
   const handleTaskComplete = async () => {
-    if (!tasks || !tasks[currentTaskIndex]) return;
+    if (!currentTask) return;
 
     try {
-      const currentTask = tasks[currentTaskIndex];
-      
       // Update task completion status
       const { error: taskError } = await supabase
         .from('tasks')
@@ -110,7 +111,9 @@ export const DashboardContent = () => {
       });
 
       // Check if all tasks are completed
-      const isLastTask = currentTaskIndex === tasks.length - 1;
+      const remainingTasks = tasks?.filter(task => !task.is_completed && task.id !== currentTask.id);
+      const isLastTask = !remainingTasks?.length;
+
       if (isLastTask) {
         // Update goal as completed
         const { error: goalError } = await supabase
@@ -125,9 +128,6 @@ export const DashboardContent = () => {
           description: "You've completed all tasks for this goal!",
           duration: 3000,
         });
-      } else {
-        // Move to next task
-        setCurrentTaskIndex(prevIndex => prevIndex + 1);
       }
 
       // Refresh tasks data
@@ -187,7 +187,6 @@ export const DashboardContent = () => {
   };
 
   const isLoading = isLoadingGoal || isLoadingTasks;
-  const currentTask = tasks?.[currentTaskIndex];
   const hasGoal = !!goal;
 
   if (isLoading) {
