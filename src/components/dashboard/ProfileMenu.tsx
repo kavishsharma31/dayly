@@ -19,7 +19,7 @@ export const ProfileMenu = () => {
     toast({
       title: "Signed out successfully",
       description: "You have been signed out of your account.",
-      duration: 5000,
+      duration: 3000,
     });
     navigate("/");
   };

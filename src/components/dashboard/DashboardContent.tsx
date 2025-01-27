@@ -106,7 +106,7 @@ export const DashboardContent = () => {
       toast({
         title: "Task Completed! 🎉",
         description: "Great job! Keep up the momentum!",
-        duration: 5000,
+        duration: 3000,
       });
 
       // Check if all tasks are completed
@@ -123,7 +123,7 @@ export const DashboardContent = () => {
         toast({
           title: "Congratulations! 🎯",
           description: "You've completed all tasks for this goal!",
-          duration: 5000,
+          duration: 3000,
         });
       } else {
         // Move to next task
@@ -147,7 +147,7 @@ export const DashboardContent = () => {
         title: "Error",
         description: "Failed to complete task. Please try again.",
         variant: "destructive",
-        duration: 5000,
+        duration: 3000,
       });
     }
   };
@@ -170,7 +170,7 @@ export const DashboardContent = () => {
         toast({
           title: "Ready to start a new project!",
           description: "Let's set up your new goal.",
-          duration: 5000,
+          duration: 3000,
         });
       } catch (error) {
         console.error('Error starting new project:', error);
@@ -178,7 +178,7 @@ export const DashboardContent = () => {
           title: "Error",
           description: "Failed to start new project. Please try again.",
           variant: "destructive",
-          duration: 5000,
+          duration: 3000,
         });
       }
     } else {
