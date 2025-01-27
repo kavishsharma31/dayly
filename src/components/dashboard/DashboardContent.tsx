@@ -11,6 +11,7 @@ export const DashboardContent = () => {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [currentTask, setCurrentTask] = useState<string>("");
   const [currentTaskInstructions, setCurrentTaskInstructions] = useState<string>("");
+  const [currentTaskIndex, setCurrentTaskIndex] = useState(0);
   const [showConfetti, setShowConfetti] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -22,10 +23,10 @@ export const DashboardContent = () => {
     if (savedGoal && savedTasks) {
       setHasGoal(true);
       const tasks = JSON.parse(savedTasks);
-      setCurrentTask(tasks[0].description);
-      setCurrentTaskInstructions(tasks[0].instructions);
+      setCurrentTask(tasks[currentTaskIndex].description);
+      setCurrentTaskInstructions(tasks[currentTaskIndex].instructions);
     }
-  }, []);
+  }, [currentTaskIndex]);
 
   const handleGoalCreated = () => {
     setShowGoalForm(false);
@@ -56,6 +57,22 @@ export const DashboardContent = () => {
       title: "Task Completed! 🎉",
       description: "Great job! Keep up the momentum!",
     });
+
+    // Get tasks from localStorage
+    const savedTasks = localStorage.getItem("tasks");
+    if (savedTasks) {
+      const tasks = JSON.parse(savedTasks);
+      if (currentTaskIndex < tasks.length - 1) {
+        // Move to next task
+        setCurrentTaskIndex(prevIndex => prevIndex + 1);
+      } else {
+        // All tasks completed
+        toast({
+          title: "Congratulations! 🎯",
+          description: "You've completed all tasks for this goal!",
+        });
+      }
+    }
 
     // Remove confetti after 3 seconds
     setTimeout(() => {
