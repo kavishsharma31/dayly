@@ -1,9 +1,10 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider } from "@/components/ui/sidebar";
-import { LayoutDashboard, LineChart, Target } from "lucide-react";
+import { LayoutDashboard, LineChart, Target, User } from "lucide-react";
 import { useState } from "react";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProgressContent } from "@/components/dashboard/ProgressContent";
 import { GoalContent } from "@/components/dashboard/GoalContent";
+import { ProfileMenu } from "@/components/dashboard/ProfileMenu";
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -51,11 +52,16 @@ const Dashboard = () => {
           </SidebarContent>
         </Sidebar>
         
-        <main className="flex-1 p-6">
-          {activeTab === "dashboard" && <DashboardContent />}
-          {activeTab === "progress" && <ProgressContent />}
-          {activeTab === "goal" && <GoalContent />}
-        </main>
+        <div className="flex-1">
+          <div className="p-4 border-b flex justify-end">
+            <ProfileMenu />
+          </div>
+          <main className="p-6">
+            {activeTab === "dashboard" && <DashboardContent />}
+            {activeTab === "progress" && <ProgressContent />}
+            {activeTab === "goal" && <GoalContent />}
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );
