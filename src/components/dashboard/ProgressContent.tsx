@@ -17,7 +17,7 @@ export const ProgressContent = () => {
         .is('completed_at', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (goalsError || !goals) return { progress: 0, streak: 0 };
 
