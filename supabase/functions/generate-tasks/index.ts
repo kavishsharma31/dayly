@@ -33,15 +33,21 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini", // Fixed model name
+        model: "gpt-4o-mini",
         messages: [
           {
             role: 'system',
-            content: `You are a helpful AI that creates structured task lists for achieving goals. Break down goals into specific, actionable tasks that can be completed within ${durationDays} days. Each task should have a clear description and detailed instructions. Format your response as a JSON array of objects, each with 'description' and 'instructions' fields. Aim to create tasks that are progressive and build upon each other.`
+            content: `You are a helpful AI that breaks down goals into specific, actionable tasks. Create a task list for achieving the goal within ${durationDays} days. Each task should have a clear description and detailed instructions. Format your response as a JSON array where each object has 'description' and 'instructions' fields. Example format:
+            [
+              {
+                "description": "Task 1 title",
+                "instructions": "Detailed steps for task 1"
+              }
+            ]`
           },
           {
             role: 'user',
-            content: `Create a task list for this goal that can be completed in ${durationDays} days: "${goalDescription}"`
+            content: goalDescription
           }
         ],
         temperature: 0.7,
@@ -64,22 +70,31 @@ serve(async (req) => {
     let tasks;
     try {
       const content = data.choices[0].message.content;
-      tasks = typeof content === 'string' ? JSON.parse(content) : content;
+      console.log('Raw content from OpenAI:', content);
+      
+      // Try to parse the content as JSON
+      tasks = JSON.parse(content.trim());
       
       if (!Array.isArray(tasks)) {
         throw new Error('Tasks must be an array');
       }
-      
-      tasks = tasks.map(task => ({
-        description: String(task.description || ''),
-        instructions: String(task.instructions || '')
-      }));
 
-      console.log('Processed tasks:', JSON.stringify(tasks));
+      // Validate and sanitize each task
+      tasks = tasks.map((task, index) => {
+        if (!task.description || !task.instructions) {
+          throw new Error(`Task ${index} is missing required fields`);
+        }
+        return {
+          description: String(task.description),
+          instructions: String(task.instructions)
+        };
+      });
+
+      console.log('Successfully processed tasks:', JSON.stringify(tasks));
     } catch (e) {
       console.error('Error parsing OpenAI response:', e);
       console.log('Raw content:', data.choices[0].message.content);
-      throw new Error('Failed to parse tasks from OpenAI response');
+      throw new Error(`Failed to parse OpenAI response: ${e.message}`);
     }
 
     return new Response(
