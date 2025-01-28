@@ -37,7 +37,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful AI that breaks down goals into specific, actionable tasks. Create a task list for achieving the goal within ${durationDays} days. Each task should have a clear description and detailed instructions. Format your response as a JSON array where each object has 'description' and 'instructions' fields. Example format:
+            content: `You are a helpful AI that breaks down goals into specific, actionable tasks. Create a task list for achieving the goal within ${durationDays} days. Each task should have a clear description and detailed instructions. Return ONLY a JSON array where each object has 'description' and 'instructions' fields, with no additional text or markdown formatting. Example format:
             [
               {
                 "description": "Task 1 title",
@@ -72,8 +72,16 @@ serve(async (req) => {
       const content = data.choices[0].message.content;
       console.log('Raw content from OpenAI:', content);
       
-      // Try to parse the content as JSON
-      tasks = JSON.parse(content.trim());
+      // Clean up the content by removing markdown code blocks if present
+      const cleanContent = content
+        .replace(/```json\n?/g, '')
+        .replace(/```\n?/g, '')
+        .trim();
+      
+      console.log('Cleaned content:', cleanContent);
+      
+      // Try to parse the cleaned content as JSON
+      tasks = JSON.parse(cleanContent);
       
       if (!Array.isArray(tasks)) {
         throw new Error('Tasks must be an array');
