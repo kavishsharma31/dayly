@@ -33,7 +33,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o-mini", // Fixed model name
         messages: [
           {
             role: 'system',
@@ -63,11 +63,9 @@ serve(async (req) => {
 
     let tasks;
     try {
-      // The content should already be in JSON format, but let's handle both cases
       const content = data.choices[0].message.content;
       tasks = typeof content === 'string' ? JSON.parse(content) : content;
       
-      // Validate the tasks structure
       if (!Array.isArray(tasks)) {
         throw new Error('Tasks must be an array');
       }
@@ -76,6 +74,8 @@ serve(async (req) => {
         description: String(task.description || ''),
         instructions: String(task.instructions || '')
       }));
+
+      console.log('Processed tasks:', JSON.stringify(tasks));
     } catch (e) {
       console.error('Error parsing OpenAI response:', e);
       console.log('Raw content:', data.choices[0].message.content);
