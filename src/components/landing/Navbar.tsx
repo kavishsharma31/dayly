@@ -24,11 +24,9 @@ export const Navbar = () => {
       
       // If session is null (user logged out or token expired)
       if (!session) {
-        // Clear any stored auth data
-        supabase.auth.signOut();
         navigate("/auth?mode=login");
         toast({
-          title: "Session expired",
+          title: "Session ended",
           description: "Please log in again to continue.",
           duration: 3000,
         });
@@ -42,7 +40,8 @@ export const Navbar = () => {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      navigate("/");
+      setSession(null); // Immediately clear session state
+      navigate("/auth?mode=login");
       toast({
         title: "Logged out successfully",
         description: "You have been signed out of your account.",
