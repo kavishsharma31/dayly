@@ -1,7 +1,5 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,138 +8,87 @@ const corsHeaders = {
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
-    if (!openAIApiKey) {
-      throw new Error('OpenAI API key is not configured');
-    }
-
     const { goalDescription, durationDays } = await req.json();
-    
+
     if (!goalDescription || !durationDays) {
-      throw new Error('Goal description and duration are required');
+      throw new Error('Missing required fields: goalDescription or durationDays');
     }
 
-    console.log('Calling OpenAI API with:', { goalDescription, durationDays });
+    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+    if (!OPENAI_API_KEY) {
+      throw new Error('Missing OpenAI API key');
+    }
 
+    console.log('Making request to OpenAI API...');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openAIApiKey}`,
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',  // Using the stable GPT-3.5 model
         messages: [
           {
             role: 'system',
-            content: `You are a comprehensive task breakdown expert who provides complete, self-contained instructions without referring users to external resources.
-
-For each task:
-1. Break down complex skills into detailed, step-by-step instructions
-2. Include ALL necessary information within the instructions
-3. Provide specific exercises or practice routines
-4. NEVER tell users to "look up" or "search for" information online
-5. If the task involves learning something, include the actual content to learn
-
-For fitness goals specifically:
-1. Include specific exercise routines with reps and sets
-2. Add form instructions and safety tips
-3. Include warm-up and cool-down routines
-4. Specify duration for each exercise
-5. Add progression guidelines
-
-The number of tasks should be proportional to both the complexity of the goal and the timeframe:
-- Simple goals (1-7 days): 3-5 tasks
-- Medium goals (8-30 days): 5-10 tasks
-- Complex goals (31+ days): 10-15 tasks
-
-Each task should have:
-1. A clear, concise description (max 100 characters)
-2. Detailed, self-contained instructions (max 500 characters per step)
-
-IMPORTANT: Your response must be a valid JSON array of objects, each with 'description' and 'instructions' properties.
-Example format:
-[
-  {
-    "description": "Task description here",
-    "instructions": "Step 1 instructions\\nStep 2 instructions"
-  }
-]`
+            content: `You are a helpful AI that creates structured task lists for achieving goals. 
+            For fitness and health-related goals, create specific, actionable daily tasks that are realistic and progressive.
+            Each task should have a clear description and detailed instructions.
+            Format the response as a JSON array of objects, each with 'description' and 'instructions' fields.
+            Limit the number of tasks based on the provided duration in days.`
           },
           {
             role: 'user',
-            content: `Goal: ${goalDescription}\nTimeframe: ${durationDays} days`
+            content: `Create a task list for this goal: "${goalDescription}" that can be completed in ${durationDays} days.`
           }
         ],
         temperature: 0.7,
-        max_tokens: 4000,
+        max_tokens: 1000,
       }),
     });
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('OpenAI API error:', error);
-      throw new Error(`OpenAI API error: ${error}`);
+      const errorData = await response.text();
+      console.error('OpenAI API Error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} ${errorData}`);
     }
 
     const data = await response.json();
-    console.log('OpenAI API response:', data);
+    console.log('OpenAI Response:', JSON.stringify(data));
 
-    const tasksContent = data.choices[0].message.content;
-    console.log('Raw tasks content:', tasksContent);
-    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response format from OpenAI');
+    }
+
     let tasks;
     try {
-      tasks = JSON.parse(tasksContent);
-      console.log('Parsed tasks:', tasks);
-    } catch (error) {
-      console.error('Failed to parse OpenAI response:', error);
-      console.error('Raw content that failed to parse:', tasksContent);
-      throw new Error('Failed to parse AI response into valid JSON. Please try again.');
-    }
-
-    if (!Array.isArray(tasks) || tasks.length === 0) {
-      console.error('Invalid tasks format:', tasks);
-      throw new Error('Invalid tasks format received from AI');
-    }
-
-    // Validate task structure
-    const isValidTask = (task: any) => 
-      typeof task === 'object' && 
-      typeof task.description === 'string' && 
-      typeof task.instructions === 'string';
-
-    if (!tasks.every(isValidTask)) {
-      console.error('Invalid task structure:', tasks);
-      throw new Error('Tasks received from AI do not match required format');
+      tasks = JSON.parse(data.choices[0].message.content);
+    } catch (e) {
+      console.error('Error parsing OpenAI response:', e);
+      console.log('Raw content:', data.choices[0].message.content);
+      throw new Error('Failed to parse tasks from OpenAI response');
     }
 
     return new Response(
       JSON.stringify({ tasks }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        } 
-      }
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      },
     );
+
   } catch (error) {
     console.error('Error in generate-tasks function:', error);
     return new Response(
-      JSON.stringify({ 
-        error: error.message || 'Failed to generate tasks',
-        details: error.toString()
-      }),
+      JSON.stringify({ error: error.message }),
       {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 500,
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
-        },
-      }
+      },
     );
   }
 });
