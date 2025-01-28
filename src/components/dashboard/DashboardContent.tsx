@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CreateGoalForm } from "./CreateGoalForm";
 import { useNavigate } from "react-router-dom";
 import ReactConfetti from "react-confetti";
@@ -26,22 +26,9 @@ interface Goal {
 export const DashboardContent = () => {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [username, setUsername] = useState<string>("");
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // Fetch current user's username
-  useEffect(() => {
-    const getUsername = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const email = user.email;
-        setUsername(email?.split('@')[0] || 'User');
-      }
-    };
-    getUsername();
-  }, []);
 
   // Fetch latest active goal
   const { data: goal, isLoading: isLoadingGoal } = useQuery({
@@ -60,7 +47,6 @@ export const DashboardContent = () => {
     }
   });
 
-  // Fetch tasks for current goal
   const { data: tasks, isLoading: isLoadingTasks } = useQuery({
     queryKey: ['tasks', goal?.id],
     queryFn: async () => {
@@ -203,7 +189,7 @@ export const DashboardContent = () => {
         />
       )}
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold text-primary">Welcome back, {username}! 👋</h1>
+        <h1 className="text-2xl font-bold text-primary">Welcome back! 👋</h1>
         {showGoalForm ? (
           <CreateGoalForm onGoalCreated={handleGoalCreated} />
         ) : (
