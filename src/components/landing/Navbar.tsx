@@ -41,7 +41,7 @@ export const Navbar = () => {
     try {
       await supabase.auth.signOut();
       setSession(null); // Immediately clear session state
-      navigate("/auth?mode=login");
+      navigate("/"); // Changed to redirect to landing page
       toast({
         title: "Logged out successfully",
         description: "You have been signed out of your account.",
