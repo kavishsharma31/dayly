@@ -33,7 +33,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-3.5-turbo',  // Updated to use the correct model name
         messages: [
           {
             role: 'system',
@@ -41,10 +41,17 @@ serve(async (req) => {
 
 For each task:
 1. Break down complex skills into detailed, step-by-step instructions
-2. Include ALL necessary information within the instructions (e.g., for music: include actual tabs, chord progressions, or notes)
-3. Provide specific exercises or practice routines when relevant
+2. Include ALL necessary information within the instructions
+3. Provide specific exercises or practice routines
 4. NEVER tell users to "look up" or "search for" information online
 5. If the task involves learning something, include the actual content to learn
+
+For fitness goals specifically:
+1. Include specific exercise routines with reps and sets
+2. Add form instructions and safety tips
+3. Include warm-up and cool-down routines
+4. Specify duration for each exercise
+5. Add progression guidelines
 
 The number of tasks should be proportional to both the complexity of the goal and the timeframe:
 - Simple goals (1-7 days): 3-5 tasks
