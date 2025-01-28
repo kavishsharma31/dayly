@@ -24,7 +24,7 @@ export const Navbar = () => {
       
       // If session is null (user logged out or token expired)
       if (!session) {
-        navigate("/auth?mode=login");
+        navigate("/"); // Changed to redirect to landing page instead of auth
         toast({
           title: "Session ended",
           description: "Please log in again to continue.",
