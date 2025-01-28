@@ -1,30 +1,62 @@
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
+import { Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 
 export const Navbar = () => {
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
     });
 
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      
+      // If session is null (user logged out or token expired)
+      if (!session) {
+        // Clear any stored auth data
+        supabase.auth.signOut();
+        navigate("/auth?mode=login");
+        toast({
+          title: "Session expired",
+          description: "Please log in again to continue.",
+          duration: 3000,
+        });
+      }
     });
 
+    // Cleanup subscription
     return () => subscription.unsubscribe();
-  }, []);
+  }, [navigate, toast]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/");
+    try {
+      await supabase.auth.signOut();
+      navigate("/");
+      toast({
+        title: "Logged out successfully",
+        description: "You have been signed out of your account.",
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast({
+        title: "Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+        duration: 3000,
+      });
+    }
   };
 
   return (
