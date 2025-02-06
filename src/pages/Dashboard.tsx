@@ -1,5 +1,5 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { LayoutDashboard, TrendingUp, Target } from "lucide-react";
+import { LayoutDashboard, TrendingUp, Trophy, Target } from "lucide-react";
 import { useState } from "react";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProgressContent } from "@/components/dashboard/ProgressContent";
@@ -29,7 +29,7 @@ const Dashboard = () => {
     {
       id: "my-goals",
       title: "My Goals",
-      icon: Target,
+      icon: Trophy,
     },
   ];
 
