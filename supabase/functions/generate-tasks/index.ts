@@ -1,5 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,22 +25,24 @@ serve(async (req) => {
       throw new Error('Missing OpenAI API key');
     }
 
-    const systemPrompt = `You are a helpful AI that breaks down goals into specific, actionable tasks. Your task is to create EXACTLY ${durationDays} tasks - one for each day, no more and no less. Each task must be specific, actionable, and build upon previous tasks.
+    const systemPrompt = `You are a task breakdown assistant. Your job is to break down a goal into EXACTLY ${durationDays} daily tasks - no more, no less.
 
-    Requirements:
-    1. Generate EXACTLY ${durationDays} tasks
-    2. Each task must have a clear description and detailed instructions
-    3. Tasks should progress logically, building upon previous tasks
-    4. Tasks should be evenly distributed across the timeline
-    5. Each task should be completable within a day
+    CRITICAL REQUIREMENTS:
+    1. You MUST generate EXACTLY ${durationDays} tasks - this is non-negotiable
+    2. Each task must be completable within one day
+    3. Tasks must progress logically, building upon previous tasks
+    4. Each task must include both a clear description and detailed instructions
+    5. Format your response as a JSON array with exactly ${durationDays} objects
+    6. Each object must have exactly two fields: "description" and "instructions"
+    7. DO NOT include any explanatory text or additional formatting
 
-    Return ONLY a JSON array with exactly ${durationDays} objects, where each object has 'description' and 'instructions' fields. Do not include any additional text or formatting.
-
-    Example format for ONE task (you must provide exactly ${durationDays} of these):
-    {
-      "description": "Clear task description",
-      "instructions": "Detailed steps to complete the task"
-    }`;
+    Example format (you must provide exactly ${durationDays} of these):
+    [
+      {
+        "description": "Task description here",
+        "instructions": "Step-by-step instructions here"
+      }
+    ]`;
 
     console.log('Sending request to OpenAI...');
     
@@ -59,10 +61,10 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: `Goal: ${goalDescription}\nCreate exactly ${durationDays} daily tasks to achieve this goal.`
+            content: `Break down this goal into exactly ${durationDays} daily tasks: ${goalDescription}`
           }
         ],
-        temperature: 0.7,
+        temperature: 0.5, // Lower temperature for more consistent results
       }),
     });
 
@@ -80,10 +82,10 @@ serve(async (req) => {
     }
 
     try {
-      const content = data.choices[0].message.content;
-      console.log('Raw content from OpenAI:', content);
+      // Clean up the content and parse JSON
+      const content = data.choices[0].message.content.trim();
+      console.log('Raw content:', content);
       
-      // Clean up the content
       const cleanContent = content
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
@@ -91,15 +93,19 @@ serve(async (req) => {
       
       console.log('Cleaned content:', cleanContent);
       
-      // Parse and validate the tasks
-      const parsedTasks = JSON.parse(cleanContent);
+      const tasks = JSON.parse(cleanContent);
       
-      if (!Array.isArray(parsedTasks)) {
+      if (!Array.isArray(tasks)) {
         throw new Error('Generated content is not an array');
       }
 
+      // Validate tasks array length
+      if (tasks.length !== durationDays) {
+        throw new Error(`Number of tasks (${tasks.length}) must be exactly equal to the duration days (${durationDays})`);
+      }
+
       // Validate and sanitize each task
-      const validatedTasks = parsedTasks.map((task, index) => {
+      const validatedTasks = tasks.map((task, index) => {
         if (!task.description || !task.instructions) {
           throw new Error(`Task ${index} is missing required fields`);
         }
@@ -108,11 +114,6 @@ serve(async (req) => {
           instructions: String(task.instructions).trim()
         };
       });
-
-      // Check if we have exactly the right number of tasks
-      if (validatedTasks.length !== durationDays) {
-        throw new Error(`Number of tasks (${validatedTasks.length}) must be exactly equal to the duration days (${durationDays})`);
-      }
 
       console.log(`Successfully generated ${validatedTasks.length} tasks`);
 
