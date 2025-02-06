@@ -25,26 +25,31 @@ serve(async (req) => {
       throw new Error('Missing OpenAI API key');
     }
 
-    const systemPrompt = `You are a task breakdown assistant. Your job is to break down a goal into EXACTLY ${durationDays} daily tasks.
+    const systemPrompt = `You are a task breakdown assistant. Your primary responsibility is to generate EXACTLY ${durationDays} tasks - no exceptions.
 
-CRITICAL REQUIREMENTS:
-1. You MUST generate EXACTLY ${durationDays} tasks - no more, no less
-2. Each task must be achievable within 30 minutes
-3. Tasks must build upon previous tasks in a logical progression
-4. Each task must include a clear description and step-by-step instructions
-5. Return ONLY a JSON array with exactly ${durationDays} objects
-6. Each object must have exactly two fields: "description" and "instructions"
-7. DO NOT include any explanatory text, markdown formatting, or code blocks
+STRICT REQUIREMENTS:
+1. You MUST output EXACTLY ${durationDays} tasks - this is a hard requirement
+2. Each task should take 30 minutes to complete
+3. Tasks should follow a logical progression
+4. Each task needs a description and clear instructions
+5. Output format must be a JSON array with ${durationDays} objects
+6. Each object requires "description" and "instructions" fields only
+7. No additional text or formatting allowed
 
-Example format (remember, you must provide exactly ${durationDays} tasks):
+IMPORTANT NOTES:
+- Double-check your output contains EXACTLY ${durationDays} tasks
+- If you generate more or fewer tasks, the system will reject your response
+- Keep tasks simple enough to complete in 30 minutes
+
+Example format:
 [
   {
-    "description": "Task description",
-    "instructions": "Step-by-step instructions"
+    "description": "Task description here",
+    "instructions": "Step-by-step instructions here"
   }
 ]
 
-Important: Count your tasks carefully and ensure you generate exactly ${durationDays} tasks.`;
+Final check: Verify you have created EXACTLY ${durationDays} tasks before responding.`;
 
     console.log('Sending request to OpenAI...');
     
@@ -63,10 +68,10 @@ Important: Count your tasks carefully and ensure you generate exactly ${duration
           },
           {
             role: 'user',
-            content: `Create exactly ${durationDays} daily tasks to achieve this goal: ${goalDescription}. Remember to return ONLY the JSON array with exactly ${durationDays} tasks.`
+            content: `Create EXACTLY ${durationDays} tasks for this goal: ${goalDescription}. Remember: I need EXACTLY ${durationDays} tasks in the JSON array format - no more, no less.`
           }
         ],
-        temperature: 0.3, // Lower temperature for more deterministic output
+        temperature: 0.2, // Very low temperature for more deterministic output
       }),
     });
 
@@ -84,11 +89,9 @@ Important: Count your tasks carefully and ensure you generate exactly ${duration
     }
 
     try {
-      // Clean and parse the response
       const content = data.choices[0].message.content.trim();
       console.log('Raw content:', content);
       
-      // Remove any markdown code block formatting
       const cleanContent = content
         .replace(/```json\n?/g, '')
         .replace(/```\n?/g, '')
@@ -102,13 +105,11 @@ Important: Count your tasks carefully and ensure you generate exactly ${duration
         throw new Error('Generated content is not an array');
       }
 
-      // Validate the number of tasks
+      console.log(`Number of tasks generated: ${tasks.length}`);
       if (tasks.length !== durationDays) {
-        console.error(`Generated ${tasks.length} tasks instead of ${durationDays}`);
-        throw new Error(`Number of tasks (${tasks.length}) must be exactly equal to the duration days (${durationDays})`);
+        throw new Error(`OpenAI generated ${tasks.length} tasks instead of the required ${durationDays} tasks. Please try again.`);
       }
 
-      // Validate each task's structure and content
       const validatedTasks = tasks.map((task, index) => {
         if (!task.description || !task.instructions) {
           throw new Error(`Task ${index + 1} is missing required fields`);
@@ -119,7 +120,7 @@ Important: Count your tasks carefully and ensure you generate exactly ${duration
         };
       });
 
-      console.log(`Successfully generated ${validatedTasks.length} tasks`);
+      console.log(`Successfully validated ${validatedTasks.length} tasks`);
 
       return new Response(
         JSON.stringify({ tasks: validatedTasks }),
