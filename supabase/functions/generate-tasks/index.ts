@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -25,35 +24,31 @@ serve(async (req) => {
       throw new Error('Missing OpenAI API key');
     }
 
-    const systemPrompt = `You are a task breakdown assistant. Your primary responsibility is to generate EXACTLY ${durationDays} tasks - no exceptions.
+    const systemPrompt = `You are a task breakdown assistant. Your role is to break down goals into daily tasks.
 
-STRICT REQUIREMENTS:
-1. You MUST output EXACTLY ${durationDays} tasks - this is a hard requirement
-2. Each task should take 30 minutes to complete
-3. Tasks should follow a logical progression
-4. Each task needs a description and clear instructions
-5. Output format must be a JSON array with ${durationDays} objects
-6. Each object requires "description" and "instructions" fields only
-7. No additional text or formatting allowed
+CRITICAL REQUIREMENTS:
+1. You MUST generate EXACTLY ${durationDays} tasks
+2. Each task should be completable in 30 minutes
+3. Tasks should progress logically
+4. Each task needs a description and instructions
+5. Return a JSON array with ${durationDays} objects
+6. Each object must have "description" and "instructions" fields
+7. No extra text or formatting
 
-IMPORTANT NOTES:
-- Double-check your output contains EXACTLY ${durationDays} tasks
-- If you generate more or fewer tasks, the system will reject your response
-- Keep tasks simple enough to complete in 30 minutes
-
-Example format:
+Format your response as a JSON array:
 [
   {
-    "description": "Task description here",
-    "instructions": "Step-by-step instructions here"
+    "description": "Task description",
+    "instructions": "Task instructions"
   }
 ]
 
-Final check: Verify you have created EXACTLY ${durationDays} tasks before responding.`;
+IMPORTANT: Your response MUST contain EXACTLY ${durationDays} tasks. Count them multiple times before responding.`;
 
     console.log('Sending request to OpenAI...');
     
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // First attempt with regular temperature
+    let response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${openAIApiKey}`,
@@ -68,72 +63,97 @@ Final check: Verify you have created EXACTLY ${durationDays} tasks before respon
           },
           {
             role: 'user',
-            content: `Create EXACTLY ${durationDays} tasks for this goal: ${goalDescription}. Remember: I need EXACTLY ${durationDays} tasks in the JSON array format - no more, no less.`
+            content: `Break down this goal into EXACTLY ${durationDays} tasks: ${goalDescription}. You MUST generate EXACTLY ${durationDays} tasks, no more, no less.`
           }
         ],
-        temperature: 0.2, // Very low temperature for more deterministic output
+        temperature: 0.1, // Very low temperature for consistency
       }),
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('OpenAI API Error:', errorText);
-      throw new Error(`OpenAI API error: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json();
-    console.log('Received response from OpenAI');
-
-    if (!data.choices?.[0]?.message?.content) {
-      throw new Error('Invalid response format from OpenAI');
-    }
-
-    try {
-      const content = data.choices[0].message.content.trim();
-      console.log('Raw content:', content);
-      
-      const cleanContent = content
-        .replace(/```json\n?/g, '')
-        .replace(/```\n?/g, '')
-        .trim();
-      
-      console.log('Cleaned content:', cleanContent);
-      
-      const tasks = JSON.parse(cleanContent);
-      
-      if (!Array.isArray(tasks)) {
-        throw new Error('Generated content is not an array');
-      }
-
-      console.log(`Number of tasks generated: ${tasks.length}`);
-      if (tasks.length !== durationDays) {
-        throw new Error(`OpenAI generated ${tasks.length} tasks instead of the required ${durationDays} tasks. Please try again.`);
-      }
-
-      const validatedTasks = tasks.map((task, index) => {
-        if (!task.description || !task.instructions) {
-          throw new Error(`Task ${index + 1} is missing required fields`);
+    let data = await response.json();
+    
+    // If first attempt fails, try again with different parameters
+    let attempts = 1;
+    const maxAttempts = 3;
+    
+    while (attempts < maxAttempts) {
+      try {
+        const content = data.choices[0].message.content.trim();
+        const cleanContent = content
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+        
+        console.log('Attempt', attempts, 'content:', cleanContent);
+        
+        const tasks = JSON.parse(cleanContent);
+        
+        if (!Array.isArray(tasks)) {
+          throw new Error('Generated content is not an array');
         }
-        return {
-          description: String(task.description).trim(),
-          instructions: String(task.instructions).trim()
-        };
-      });
 
-      console.log(`Successfully validated ${validatedTasks.length} tasks`);
+        console.log(`Attempt ${attempts}: Generated ${tasks.length} tasks`);
+        
+        // If we have exactly the right number of tasks, validate and return them
+        if (tasks.length === durationDays) {
+          const validatedTasks = tasks.map((task, index) => {
+            if (!task.description || !task.instructions) {
+              throw new Error(`Task ${index + 1} is missing required fields`);
+            }
+            return {
+              description: String(task.description).trim(),
+              instructions: String(task.instructions).trim()
+            };
+          });
 
-      return new Response(
-        JSON.stringify({ tasks: validatedTasks }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        },
-      );
-
-    } catch (e) {
-      console.error('Error parsing OpenAI response:', e);
-      throw new Error(`Failed to parse OpenAI response: ${e.message}`);
+          console.log(`Successfully validated ${validatedTasks.length} tasks`);
+          return new Response(
+            JSON.stringify({ tasks: validatedTasks }),
+            {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              status: 200,
+            },
+          );
+        }
+        
+        // If we don't have the right number of tasks, try again
+        throw new Error(`Generated ${tasks.length} tasks instead of ${durationDays}`);
+      } catch (error) {
+        console.log(`Attempt ${attempts} failed:`, error.message);
+        attempts++;
+        
+        if (attempts >= maxAttempts) {
+          throw new Error(`Failed to generate exactly ${durationDays} tasks after ${maxAttempts} attempts`);
+        }
+        
+        // Try again with adjusted parameters
+        response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openAIApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            messages: [
+              {
+                role: 'system',
+                content: systemPrompt
+              },
+              {
+                role: 'user',
+                content: `This is attempt ${attempts}. You MUST generate EXACTLY ${durationDays} tasks for this goal: ${goalDescription}. Previous attempts failed because they didn't generate exactly ${durationDays} tasks. Count your tasks carefully.`
+              }
+            ],
+            temperature: 0.1 * attempts, // Slightly increase temperature with each attempt
+          }),
+        });
+        
+        data = await response.json();
+      }
     }
+
+    throw new Error(`Failed to generate exactly ${durationDays} tasks after ${maxAttempts} attempts`);
 
   } catch (error) {
     console.error('Error in generate-tasks function:', error);
