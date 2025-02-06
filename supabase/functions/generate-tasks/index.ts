@@ -37,7 +37,7 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful AI that breaks down goals into specific, actionable tasks. Create a task list for achieving the goal that matches the number of days specified (${durationDays} days) or a multiple of it. Each task should have a clear description and detailed instructions. Tasks should be evenly distributed across the timeline. Return ONLY a JSON array where each object has 'description' and 'instructions' fields, with no additional text or markdown formatting. The number of tasks MUST be either exactly ${durationDays} or a small multiple of it (2x or 3x if needed for more granular tasks). Example format:
+            content: `You are a helpful AI that breaks down goals into specific, actionable tasks. You MUST create EXACTLY ${durationDays} tasks (no more, no less) - one task per day. Each task should have a clear description and detailed instructions. Tasks should be evenly distributed across the timeline. Return ONLY a JSON array where each object has 'description' and 'instructions' fields, with no additional text or markdown formatting. Example format:
             [
               {
                 "description": "Task 1 title",
@@ -99,8 +99,8 @@ serve(async (req) => {
       });
 
       // Validate number of tasks
-      if (tasks.length % durationDays !== 0) {
-        throw new Error(`Number of tasks (${tasks.length}) must be a multiple of the duration days (${durationDays})`);
+      if (tasks.length !== durationDays) {
+        throw new Error(`Number of tasks (${tasks.length}) must be exactly equal to the duration days (${durationDays})`);
       }
 
       console.log('Successfully processed tasks:', JSON.stringify(tasks));
