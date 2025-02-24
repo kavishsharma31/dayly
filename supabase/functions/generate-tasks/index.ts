@@ -1,3 +1,4 @@
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
@@ -15,14 +16,29 @@ serve(async (req) => {
     const { goalDescription, durationDays } = await req.json();
     console.log('Received request:', { goalDescription, durationDays });
 
-    if (!goalDescription || !durationDays) {
-      throw new Error('Missing required fields: goalDescription or durationDays');
-    }
-
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
       throw new Error('Missing OpenAI API key');
     }
+
+    const systemPrompt = `You are a task breakdown assistant. Your job is to break down goals into EXACTLY the specified number of daily tasks.
+
+CRITICAL REQUIREMENTS:
+1. You MUST generate EXACTLY ${durationDays} tasks - no more, no less
+2. Each task should be achievable in 30 minutes
+3. Tasks must progress logically from basic to advanced
+4. Each task must have a clear description and detailed instructions
+5. Return ONLY a JSON array with ${durationDays} objects
+6. Each object MUST have "description" and "instructions" fields
+7. Format must be a plain JSON array, no markdown or code blocks
+
+Example format for response (but with ${durationDays} tasks):
+[
+  {
+    "description": "Clear task title",
+    "instructions": "Detailed step-by-step instructions"
+  }
+]`;
 
     const maxRetries = 3;
     let attempt = 0;
@@ -31,24 +47,6 @@ serve(async (req) => {
     while (attempt < maxRetries && !tasks) {
       attempt++;
       console.log(`Attempt ${attempt} to generate tasks`);
-
-      const systemPrompt = `You are a task breakdown assistant. Break down goals into exactly ${durationDays} daily tasks.
-
-Rules:
-1. Generate EXACTLY ${durationDays} tasks - no more, no less
-2. Each task should take 30 minutes
-3. Tasks must progress from basic to advanced
-4. Each task needs a description and instructions
-5. Return ONLY valid JSON array with ${durationDays} objects
-6. Each object must have "description" and "instructions" fields
-
-Example format:
-[
-  {
-    "description": "Task title here",
-    "instructions": "Step-by-step instructions here"
-  }
-]`;
 
       try {
         const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -66,11 +64,14 @@ Example format:
               },
               {
                 role: 'user',
-                content: `Create exactly ${durationDays} tasks for this goal: ${goalDescription}`
+                content: `Create a detailed task breakdown for this ${durationDays}-day goal: ${goalDescription}
+                Remember: I need EXACTLY ${durationDays} tasks, each with clear instructions.`
               }
             ],
-            temperature: 0.7,
-            max_tokens: 2500,
+            temperature: Math.max(0.2, 0.7 - (attempt * 0.2)), // Decrease temperature with each retry
+            max_tokens: 4000, // Increased token limit for longer responses
+            presence_penalty: 0.1,
+            frequency_penalty: 0.1
           }),
         });
 
@@ -88,16 +89,20 @@ Example format:
           continue;
         }
 
-        const content = data.choices[0].message.content.trim();
-        console.log(`Raw content for attempt ${attempt}:`, content);
+        let content = data.choices[0].message.content.trim();
+        
+        // Remove any markdown code blocks if present
+        content = content.replace(/```json\n?|\n?```/g, '');
+        
+        // Try to find and extract JSON if it's not already valid JSON
+        const jsonMatch = content.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          content = jsonMatch[0];
+        }
 
-        // Try to extract JSON if it's wrapped in code blocks
-        const jsonMatch = content.match(/```json\n?([\s\S]*?)\n?```/) || content.match(/```([\s\S]*?)```/);
-        const jsonContent = jsonMatch ? jsonMatch[1].trim() : content.trim();
+        console.log(`Cleaned content for attempt ${attempt}:`, content);
         
-        console.log(`Parsed content for attempt ${attempt}:`, jsonContent);
-        
-        const parsedTasks = JSON.parse(jsonContent);
+        const parsedTasks = JSON.parse(content);
         
         if (!Array.isArray(parsedTasks)) {
           console.error(`Invalid response format (attempt ${attempt}): not an array`);
@@ -110,7 +115,7 @@ Example format:
         }
 
         // Validate each task
-        const validTasks = parsedTasks.every((task, index) => {
+        const validTasks = parsedTasks.every((task: any, index: number) => {
           if (!task.description || !task.instructions) {
             console.error(`Task ${index + 1} is missing required fields`);
             return false;
@@ -126,6 +131,7 @@ Example format:
         tasks = parsedTasks;
         console.log(`Successfully generated ${tasks.length} tasks on attempt ${attempt}`);
         break;
+
       } catch (error) {
         console.error(`Error in attempt ${attempt}:`, error);
       }
